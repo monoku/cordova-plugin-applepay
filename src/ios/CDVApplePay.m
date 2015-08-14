@@ -6,7 +6,7 @@
 #import <objc/runtime.h>
 #import "Stripe.h"
 
-NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
+NSString * const StripePublishableKey = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"StripePublishableKey"];
 
 @implementation CDVApplePay
 
@@ -41,10 +41,10 @@ NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
         return;
     }
-    
+
     PKPaymentRequest *request = [Stripe
                                  paymentRequestWithMerchantIdentifier:merchantId];
-    
+
     // Configure a dummy request
     NSString *label = @"Premium Llama Food";
     NSDecimalNumber *amount = [NSDecimalNumber decimalNumberWithString:@"10.00"];
@@ -52,7 +52,7 @@ NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
                                     [PKPaymentSummaryItem summaryItemWithLabel:label
                                                                         amount:amount]
                                     ];
-    
+
     if ([Stripe canSubmitPaymentRequest:request]) {
         CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: @"user has apple pay"];
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
@@ -83,15 +83,15 @@ NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
     NSString *label = [command.arguments objectAtIndex:1];
     NSDecimalNumber *amount = [NSDecimalNumber decimalNumberWithString:[command.arguments objectAtIndex:0]];
     request.paymentSummaryItems = @[
-        [PKPaymentSummaryItem summaryItemWithLabel:label 
+        [PKPaymentSummaryItem summaryItemWithLabel:label
                                           amount:amount]
     ];
-    
+
     NSString *cur = [command.arguments objectAtIndex:2];
     request.currencyCode = cur;
-    
+
     callbackId = command.callbackId;
-    
+
 
 #if DEBUG
     STPTestPaymentAuthorizationViewController *paymentController;
@@ -130,17 +130,16 @@ NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
         }
         [self.viewController dismissViewControllerAnimated:YES completion:nil];
     };
-    
+
 #if DEBUG
     STPCard *card = [STPCard new];
-    card.number = @"4242424242424242";
+    card.number = @"4111111111111111";
     card.expMonth = 12;
     card.expYear = 2020;
     card.cvc = @"123";
     [[STPAPIClient sharedClient] createTokenWithCard:card completion:tokenBlock];
 #else
     [[STPAPIClient sharedClient] createTokenWithPayment:payment
-                    operationQueue:[NSOperationQueue mainQueue]
                         completion:tokenBlock];
 #endif
 }
