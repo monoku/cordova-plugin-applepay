@@ -5,6 +5,7 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import "Stripe.h"
+#import <AddressBook/AddressBook.h>
 
 @implementation CDVApplePay
 
@@ -88,6 +89,8 @@
     NSString *cur = [command.arguments objectAtIndex:2];
     request.currencyCode = cur;
 
+    request.requiredBillingAddressFields = PKAddressFieldPostalAddress;
+
     callbackId = command.callbackId;
 
 
@@ -116,6 +119,14 @@
                        didAuthorizePayment:(PKPayment *)payment
                                 completion:(void (^)(PKPaymentAuthorizationStatus))completion {
 
+
+    //    NSError *error;
+
+    ABMultiValueRef addressMultiValue = ABRecordCopyValue(payment.billingAddress, kABPersonAddressProperty);
+    NSDictionary *addressDictionary = (__bridge_transfer NSDictionary *) ABMultiValueCopyValueAtIndex(addressMultiValue, 0);
+    //    NSData *json = [NSJSONSerialization dataWithJSONObject:addressDictionary options:NSJSONWritingPrettyPrinted error: &error];
+    NSLog(@"%@",addressDictionary);
+
     void(^tokenBlock)(STPToken *token, NSError *error) = ^void(STPToken *token, NSError *error) {
         if (error) {
             CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString: @"couldn't get a stripe token from STPAPIClient"];
@@ -123,11 +134,13 @@
             return;
         }
         else {
-            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: token.tokenId];
+            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{ @"address": addressDictionary,
+                                    @"token": token.tokenId }];
             [self.commandDelegate sendPluginResult:result callbackId:callbackId];
         }
         [self.viewController dismissViewControllerAnimated:YES completion:nil];
     };
+
 
 #if DEBUG
     STPCard *card = [STPCard new];
