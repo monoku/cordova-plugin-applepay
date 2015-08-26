@@ -13,18 +13,18 @@
 {
     [Stripe setDefaultPublishableKey:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"StripePublishableKey"]];
     self = (CDVApplePay*)[super initWithWebView:(UIWebView*)theWebView];
-
+    
     return self;
 }
 
 - (void)dealloc
 {
-
+    
 }
 
 - (void)onReset
 {
-
+    
 }
 
 - (void)setMerchantId:(CDVInvokedUrlCommand*)command
@@ -40,10 +40,10 @@
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
         return;
     }
-
+    
     PKPaymentRequest *request = [Stripe
                                  paymentRequestWithMerchantIdentifier:merchantId];
-
+    
     // Configure a dummy request
     NSString *label = @"Premium Llama Food";
     NSDecimalNumber *amount = [NSDecimalNumber decimalNumberWithString:@"10.00"];
@@ -51,7 +51,7 @@
                                     [PKPaymentSummaryItem summaryItemWithLabel:label
                                                                         amount:amount]
                                     ];
-
+    
     if ([Stripe canSubmitPaymentRequest:request]) {
         CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: @"user has apple pay"];
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
@@ -68,36 +68,38 @@
 
 - (void)getStripeToken:(CDVInvokedUrlCommand*)command
 {
-
+    
     if (merchantId == nil) {
         CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString: @"Please call setMerchantId() with your Apple-given merchant ID."];
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
         return;
     }
-
+    
     PKPaymentRequest *request = [Stripe
-                             paymentRequestWithMerchantIdentifier:merchantId];
-
+                                 paymentRequestWithMerchantIdentifier:merchantId];
+    
     // Configure your request here.
     NSString *label = [command.arguments objectAtIndex:1];
     NSDecimalNumber *amount = [NSDecimalNumber decimalNumberWithString:[command.arguments objectAtIndex:0]];
     request.paymentSummaryItems = @[
-        [PKPaymentSummaryItem summaryItemWithLabel:label
-                                          amount:amount]
-    ];
-
+                                    [PKPaymentSummaryItem summaryItemWithLabel:label
+                                                                        amount:amount]
+                                    ];
+    
     NSString *cur = [command.arguments objectAtIndex:2];
     request.currencyCode = cur;
-
-    request.requiredBillingAddressFields = PKAddressFieldPostalAddress;
-
+    
+    request.requiredShippingAddressFields = PKAddressFieldEmail;
+    request.requiredShippingAddressFields = PKAddressFieldEmail | PKAddressFieldPostalAddress;
+    //    request.requiredBillingAddressFields = PKAddressFieldPostalAddress;
+    
     callbackId = command.callbackId;
-
-
+    
+    
 #if DEBUG
     STPTestPaymentAuthorizationViewController *paymentController;
     paymentController = [[STPTestPaymentAuthorizationViewController alloc]
-                             initWithPaymentRequest:request];
+                         initWithPaymentRequest:request];
     paymentController.delegate = self;
     [self.viewController presentViewController:paymentController animated:YES completion:nil];
 #else
@@ -118,15 +120,22 @@
 - (void)paymentAuthorizationViewController:(PKPaymentAuthorizationViewController *)controller
                        didAuthorizePayment:(PKPayment *)payment
                                 completion:(void (^)(PKPaymentAuthorizationStatus))completion {
-
-
+    
+    
     //    NSError *error;
-
-    ABMultiValueRef addressMultiValue = ABRecordCopyValue(payment.billingAddress, kABPersonAddressProperty);
+    
+    ABMultiValueRef addressMultiValue = ABRecordCopyValue(payment.shippingAddress, kABPersonAddressProperty);
+    ABMultiValueRef emailMultiValue = ABRecordCopyValue(payment.shippingAddress, kABPersonEmailProperty);
     NSDictionary *addressDictionary = (__bridge_transfer NSDictionary *) ABMultiValueCopyValueAtIndex(addressMultiValue, 0);
+    NSString *email = (__bridge_transfer NSString *) ABMultiValueCopyValueAtIndex(emailMultiValue, 0);
     //    NSData *json = [NSJSONSerialization dataWithJSONObject:addressDictionary options:NSJSONWritingPrettyPrinted error: &error];
     NSLog(@"%@",addressDictionary);
-
+    NSLog(@"%@",email);
+    
+    if (!email) {
+        email = @"";
+    }
+    
     void(^tokenBlock)(STPToken *token, NSError *error) = ^void(STPToken *token, NSError *error) {
         if (error) {
             CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString: @"couldn't get a stripe token from STPAPIClient"];
@@ -135,13 +144,15 @@
         }
         else {
             CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{ @"address": addressDictionary,
-                                    @"token": token.tokenId }];
+                                                                                                                   @"token": token.tokenId,
+                                                                                                                   @"email": email
+                                                                                                                   }];
             [self.commandDelegate sendPluginResult:result callbackId:callbackId];
         }
         [self.viewController dismissViewControllerAnimated:YES completion:nil];
     };
-
-
+    
+    
 #if DEBUG
     STPCard *card = [STPCard new];
     card.number = @"4111111111111111";
@@ -151,7 +162,7 @@
     [[STPAPIClient sharedClient] createTokenWithCard:card completion:tokenBlock];
 #else
     [[STPAPIClient sharedClient] createTokenWithPayment:payment
-                        completion:tokenBlock];
+                                             completion:tokenBlock];
 #endif
 }
 
