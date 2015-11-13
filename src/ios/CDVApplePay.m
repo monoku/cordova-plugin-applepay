@@ -6,13 +6,13 @@
 #import <objc/runtime.h>
 #import "Stripe.h"
 
-NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
+#import <AddressBook/AddressBook.h>
 
 @implementation CDVApplePay
 
 - (CDVPlugin*)initWithWebView:(UIWebView*)theWebView
 {
-    [Stripe setDefaultPublishableKey:StripePublishableKey];
+    [Stripe setDefaultPublishableKey:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"StripePublishableKey"]];
     self = (CDVApplePay*)[super initWithWebView:(UIWebView*)theWebView];
 
     return self;
@@ -41,10 +41,10 @@ NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
         return;
     }
-    
+
     PKPaymentRequest *request = [Stripe
                                  paymentRequestWithMerchantIdentifier:merchantId];
-    
+
     // Configure a dummy request
     NSString *label = @"Premium Llama Food";
     NSDecimalNumber *amount = [NSDecimalNumber decimalNumberWithString:@"10.00"];
@@ -52,7 +52,7 @@ NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
                                     [PKPaymentSummaryItem summaryItemWithLabel:label
                                                                         amount:amount]
                                     ];
-    
+
     if ([Stripe canSubmitPaymentRequest:request]) {
         CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: @"user has apple pay"];
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
@@ -83,15 +83,18 @@ NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
     NSString *label = [command.arguments objectAtIndex:1];
     NSDecimalNumber *amount = [NSDecimalNumber decimalNumberWithString:[command.arguments objectAtIndex:0]];
     request.paymentSummaryItems = @[
-        [PKPaymentSummaryItem summaryItemWithLabel:label 
+        [PKPaymentSummaryItem summaryItemWithLabel:label
                                           amount:amount]
     ];
-    
+
     NSString *cur = [command.arguments objectAtIndex:2];
     request.currencyCode = cur;
-    
+
+    request.requiredShippingAddressFields = PKAddressFieldEmail;
+    request.requiredShippingAddressFields = PKAddressFieldEmail | PKAddressFieldPostalAddress;
+
     callbackId = command.callbackId;
-    
+
 
 #if DEBUG
     STPTestPaymentAuthorizationViewController *paymentController;
@@ -118,6 +121,18 @@ NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
                        didAuthorizePayment:(PKPayment *)payment
                                 completion:(void (^)(PKPaymentAuthorizationStatus))completion {
 
+    ABMultiValueRef addressMultiValue = ABRecordCopyValue(payment.shippingAddress, kABPersonAddressProperty);
+    ABMultiValueRef emailMultiValue = ABRecordCopyValue(payment.shippingAddress, kABPersonEmailProperty);
+    NSDictionary *addressDictionary = (__bridge_transfer NSDictionary *) ABMultiValueCopyValueAtIndex(addressMultiValue, 0);
+    NSString *email = (__bridge_transfer NSString *) ABMultiValueCopyValueAtIndex(emailMultiValue, 0);
+    //    NSData *json = [NSJSONSerialization dataWithJSONObject:addressDictionary options:NSJSONWritingPrettyPrinted error: &error];
+    NSLog(@"%@",addressDictionary);
+    NSLog(@"%@",email);
+
+    if (!email) {
+        email = @"";
+    }
+
     void(^tokenBlock)(STPToken *token, NSError *error) = ^void(STPToken *token, NSError *error) {
         if (error) {
             CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString: @"couldn't get a stripe token from STPAPIClient"];
@@ -125,15 +140,18 @@ NSString * const StripePublishableKey = @"pk_test_4ObuvKrPHRA5tFWNpi2MB1pk";
             return;
         }
         else {
-            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: token.tokenId];
+            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{ @"address": addressDictionary,
+                                                                                                                    @"token": token.tokenId,
+                                                                                                                    @"email": email
+                                                                                                                    }];
             [self.commandDelegate sendPluginResult:result callbackId:callbackId];
         }
         [self.viewController dismissViewControllerAnimated:YES completion:nil];
     };
-    
+
 #if DEBUG
     STPCard *card = [STPCard new];
-    card.number = @"4242424242424242";
+    card.number = @"5555555555554444";
     card.expMonth = 12;
     card.expYear = 2020;
     card.cvc = @"123";
