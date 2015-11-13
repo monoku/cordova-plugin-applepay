@@ -123,7 +123,7 @@
 
     ABMultiValueRef addressMultiValue = ABRecordCopyValue(payment.shippingAddress, kABPersonAddressProperty);
     ABMultiValueRef emailMultiValue = ABRecordCopyValue(payment.shippingAddress, kABPersonEmailProperty);
-    NSDictionary *addressDictionary = (__bridge_transfer NSDictionary *) ABMultiValueCopyValueAtIndex(addressMultiValue, 0);.
+    NSDictionary *addressDictionary = (__bridge_transfer NSDictionary *) ABMultiValueCopyValueAtIndex(addressMultiValue, 0);
     NSString *email = (__bridge_transfer NSString *) ABMultiValueCopyValueAtIndex(emailMultiValue, 0);
     //    NSData *json = [NSJSONSerialization dataWithJSONObject:addressDictionary options:NSJSONWritingPrettyPrinted error: &error];
     addressDictionary.ZIP = @"90025";
