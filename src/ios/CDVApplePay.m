@@ -126,7 +126,9 @@
     NSDictionary *addressDictionary = (__bridge_transfer NSDictionary *) ABMultiValueCopyValueAtIndex(addressMultiValue, 0);
     NSString *email = (__bridge_transfer NSString *) ABMultiValueCopyValueAtIndex(emailMultiValue, 0);
     //    NSData *json = [NSJSONSerialization dataWithJSONObject:addressDictionary options:NSJSONWritingPrettyPrinted error: &error];
-    addressDictionary.ZIP = @"90025";
+
+    [addressDictionary setValue: @"90025" forKey:@"ZIP"];
+
     NSLog(@"%@",addressDictionary);
     NSLog(@"%@",email);
 
