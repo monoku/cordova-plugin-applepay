@@ -9,7 +9,7 @@ var ApplePay = {
             []
         );
     },
-    
+
     setMerchantId: function(successCallback, errorCallback, merchantId) {
         cordova.exec(
             successCallback,
@@ -20,16 +20,16 @@ var ApplePay = {
         );
     },
 
-    getStripeToken: function(successCallback, errorCallback, amount, name, cur) {
+    getStripeToken: function(successCallback, errorCallback, amount, name, cur, subtotal, delivery, taxes) {
         cordova.exec(
             successCallback,
             errorCallback,
             'ApplePay',
             'getStripeToken',
-            [amount, name, cur]
+            [amount, name, cur, subtotal, delivery, taxes]
         );
     }
-    
+
 };
 
 module.exports = ApplePay;
