@@ -78,6 +78,11 @@
     PKPaymentRequest *request = [Stripe
                                  paymentRequestWithMerchantIdentifier:merchantId];
 
+    NSLog(@"Total %@", [command.arguments objectAtIndex:0]);
+    NSLog(@"Subtotal %@", [command.arguments objectAtIndex:3]);
+    NSLog(@"Delivery %@", [command.arguments objectAtIndex:4]);
+    NSLog(@"Taxes %@", [command.arguments objectAtIndex:5]);
+
     // subTotal
     NSString *subtotalLabel = @"Subtotal";
     NSDecimalNumber *subtotalAmount = [NSDecimalNumber decimalNumberWithString:[command.arguments objectAtIndex:3]];
@@ -100,7 +105,7 @@
                                     [PKPaymentSummaryItem summaryItemWithLabel:taxesLabel
                                                                         amount:taxesAmount],
                                     [PKPaymentSummaryItem summaryItemWithLabel:totalLabel
-                                                                        amount:amount]
+                                                                        amount:totalAmount]
                                     ];
 
     NSString *cur = [command.arguments objectAtIndex:2];
